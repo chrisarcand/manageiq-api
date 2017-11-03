@@ -12,6 +12,10 @@ Rails.application.routes.draw do
       match collection_name.to_s, :controller => collection_name, :action => :options, :via => :options, :as => nil
 
       scope collection_name, :controller => collection_name do
+        subcollections = Array(collection.subcollections).each_with_object({}) do |name, memo|
+          memo[name] = Api::ApiConfig.collections[name]
+        end
+
         collection.verbs.each do |verb|
           if collection.options.include?(:primary)
             case verb
@@ -50,21 +54,27 @@ Rails.application.routes.draw do
           end
         end
 
-        Array(collection.subcollections).each do |subcollection_name|
-          Api::ApiConfig.collections[subcollection_name].verbs.each do |verb|
-            case verb
-            when :get
-              get "/:c_id/#{subcollection_name}", :action => :index, :as => "#{collection_name.to_s.singularize}_#{subcollection_name.to_s.pluralize}"
-              get "/:c_id/#{subcollection_name}/:s_id", :action => :show, :as => "#{collection_name.to_s.singularize}_#{subcollection_name.to_s.singularize}"
-            when :put
-              put "/:c_id/#{subcollection_name}/:s_id", :action => :update
-            when :patch
-              patch "/:c_id/#{subcollection_name}/:s_id", :action => :update
-            when :delete
-              delete "/:c_id/#{subcollection_name}/:s_id", :action => :destroy
-            when :post
-              post "/:c_id/#{subcollection_name}", :action => :create, :constraints => Api::CreateConstraint.new
-              post "/:c_id/#{subcollection_name}(/:s_id)", :action => :update
+        subcollections.each do |subcollection_name, subcollection|
+          next unless subcollection.options.include?(:subcollection)
+
+          subcollection.verbs.each do |verb|
+            if subcollection.options.include?(:subcollection_arbitrary_resource_path)
+              get "/:c_id/#{subcollection_name}", :action => subcollection_name.to_s.pluralize, :as => "#{collection_name.to_s.singularize}_#{subcollection_name.to_s.pluralize}"
+            else
+              case verb
+              when :get
+                get "/:c_id/#{subcollection_name}", :action => :index, :as => "#{collection_name.to_s.singularize}_#{subcollection_name.to_s.pluralize}"
+                get "/:c_id/#{subcollection_name}/:s_id", :action => :show, :as => "#{collection_name.to_s.singularize}_#{subcollection_name.to_s.singularize}"
+              when :put
+                put "/:c_id/#{subcollection_name}/:s_id", :action => :update
+              when :patch
+                patch "/:c_id/#{subcollection_name}/:s_id", :action => :update
+              when :delete
+                delete "/:c_id/#{subcollection_name}/:s_id", :action => :destroy
+              when :post
+                post "/:c_id/#{subcollection_name}", :action => :create, :constraints => Api::CreateConstraint.new
+                post "/:c_id/#{subcollection_name}(/:s_id)", :action => :update
+              end
             end
           end
         end
