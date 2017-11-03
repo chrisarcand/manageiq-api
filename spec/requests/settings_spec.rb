@@ -147,3 +147,14 @@ describe "Settings API" do
     end
   end
 end
+
+context "Resource Settings Queries" do
+  describe "GET /servers/:id/settings" do
+    it "fetches the server's settings" do
+      api_basic_authorize
+      get api_server_settings_url(nil, @server.id)
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+end

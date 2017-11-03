@@ -2141,6 +2141,8 @@
     - :collection
     :verbs: *g
     :klass: MiqServer
+    :subcollections:
+    - :settings
   :service_catalogs:
     :description: Service Catalogs
     :identifier: st_catalog_accord
@@ -2511,6 +2513,8 @@
     :options:
     - :arbitrary_resource_path
     - :collection
+    - :subcollection
+    - :subcollection_arbitrary_resource_path
     :verbs: *g
     :categories:
     - product
