@@ -16,7 +16,17 @@ module Api
 
       key_id = collection_config.resource_identifier(collection_name)
 
-      normalize_url("#{collection_name}/#{resource.send(key_id)}")
+      if collection_name.to_s == request.subcollection
+        # We unconventionally support nested single resources w/o toplevel collections
+        # e.g. /:collection/:c_id/:subcollection/:id without /:subcollection/:id
+        # We cannot deduce with the resource alone what collection this
+        # object should be under. Therefore, we assume that if the object
+        # being returned is the subcollection in the request, nesting it under
+        # the request's collection is the most valid href.
+        normalize_url("#{request.collection}/#{request.collection_id}/#{collection_name}/#{resource.send(key_id)}")
+      else
+        normalize_url("#{collection_name}/#{resource.send(key_id)}")
+      end
     end
 
     def href_for!(resource)
