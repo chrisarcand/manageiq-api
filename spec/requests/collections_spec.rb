@@ -60,6 +60,7 @@ describe "Rest API Collections" do
     it "query Automate Domains" do
       FactoryGirl.create(:miq_ae_domain)
       test_collection_query(:automate_domains, api_automate_domains_url, MiqAeDomain)
+      expect(response.parsed_body['resources'].first['href']).to match(/\/api\/automate_domains\/\d+/)
     end
 
     it "query Automation Requests" do
