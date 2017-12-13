@@ -6,6 +6,29 @@ module Api
       @request = request
     end
 
+    ##
+    # Returns a valid href given a resource
+    # If the resource is not part of a valid collection/subcollection, returns nil
+    #
+    def href_for(resource)
+      collection_name = collection_config.name_for_subclass(resource.class)
+      return nil unless collection_name.present?
+
+      key_id = collection_config.resource_identifier(collection_name)
+
+      normalize_url("#{collection_name}/#{resource.send(key_id)}")
+    end
+
+    def href_for!(resource)
+      href = href_for(resource)
+
+      unless href.present?
+        raise StandardError, "Can't identify resource '#{resource.class}' to build a valid href"
+      end
+
+      href
+    end
+
     # DEPRECATED
     def normalize_href(type, value)
       if type.to_s == request.subcollection
@@ -23,5 +46,9 @@ module Api
     end
 
     private
+
+    def collection_config
+      @collection_config = CollectionConfig.new
+    end
   end
 end

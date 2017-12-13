@@ -10,14 +10,11 @@ module Api
         attrs = normalize_select_attributes(obj, opts)
         result = {}
 
-        if type
-          key_id = collection_config.resource_identifier(type)
-          if obj[key_id].present? && obj['href'].blank?
-            href = HrefBuilder.new(@req).normalize_href(type, obj[key_id])
-            if href.present?
-              result["href"] = href
-              attrs -= ["href"]
-            end
+        if obj['href'].blank?
+          href = HrefBuilder.new(@req).href_for(obj)
+          if href.present?
+            result["href"] = href
+            attrs -= ["href"]
           end
         end
 
