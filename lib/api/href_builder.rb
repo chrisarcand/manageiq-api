@@ -6,8 +6,13 @@ module Api
       @request = request
     end
 
+    # DEPRECATED
     def normalize_href(type, value)
-      type.to_s == request.subcollection ? subcollection_href(type, value) : collection_href(type, value)
+      if type.to_s == request.subcollection
+        normalize_url("#{request.collection}/#{request.collection_id}/#{type}/#{value}")
+      else
+        normalize_url("#{type}/#{value}")
+      end
     end
 
     def normalize_url(value)
@@ -18,13 +23,5 @@ module Api
     end
 
     private
-
-    def subcollection_href(type, value)
-      normalize_url("#{request.collection}/#{request.collection_id}/#{type}/#{value}")
-    end
-
-    def collection_href(type, value)
-      normalize_url("#{type}/#{value}")
-    end
   end
 end
