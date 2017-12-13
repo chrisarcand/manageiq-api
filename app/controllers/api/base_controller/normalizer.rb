@@ -13,7 +13,7 @@ module Api
         if type
           key_id = collection_config.resource_identifier(type)
           if obj[key_id].present? && obj['href'].blank?
-            href = normalize_href(type, obj[key_id])
+            href = HrefBuilder.new(@req).normalize_href(type, obj[key_id])
             if href.present?
               result["href"] = href
               attrs -= ["href"]
@@ -41,7 +41,7 @@ module Api
         elsif Api.time_attribute?(attr)
           normalize_time(value)
         elsif Api.url_attribute?(attr)
-          normalize_url(value)
+          HrefBuilder.new(@req).normalize_url(value)
         elsif Api.encrypted_attribute?(attr)
           normalize_encrypted
         elsif Api.resource_attribute?(attr)
@@ -61,33 +61,6 @@ module Api
         return Time.at(value).utc.iso8601 if value.kind_of?(Integer)
 
         value.respond_to?(:utc) ? value.utc.iso8601 : value
-      end
-
-      #
-      # Let's normalize a URL
-      #
-      # Note, all URL's are baselined as per the request specifying versioning and such.
-      #
-      def normalize_url(value)
-        svalue = value.to_s
-        pref   = @req.api_prefix
-        suffix = @req.api_suffix
-        svalue.match(pref) ? svalue : "#{pref}/#{svalue}#{suffix}"
-      end
-
-      #
-      # Let's normalize an href based on type and id value
-      #
-      def normalize_href(type, value)
-        type.to_s == @req.subcollection ? subcollection_href(type, value) : collection_href(type, value)
-      end
-
-      def subcollection_href(type, value)
-        normalize_url("#{@req.collection}/#{@req.collection_id}/#{type}/#{value}")
-      end
-
-      def collection_href(type, value)
-        normalize_url("#{type}/#{value}")
       end
 
       #

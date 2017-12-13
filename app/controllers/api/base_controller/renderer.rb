@@ -49,7 +49,7 @@ module Api
               if opts[:expand_resources]
                 add_hash json, resource_to_jbuilder(type, reftype, resource, opts).attributes!
               else
-                json.href normalize_href(reftype, resource[key_id])
+                json.href HrefBuilder.new(@req).normalize_href(reftype, resource[key_id])
               end
             end
           end
@@ -403,7 +403,7 @@ module Api
               if @req.expand?(sc) || scr[sc_key_id].nil?
                 add_child js, normalize_hash(sctype, scr)
               else
-                js.child! { |jsc| jsc.href normalize_href(sctype, scr[sc_key_id]) }
+                js.child! { |jsc| jsc.href HrefBuilder.new(@req).normalize_href(sctype, scr[sc_key_id]) }
               end
             end
           end
