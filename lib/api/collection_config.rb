@@ -70,10 +70,36 @@ module Api
       self[collection_name][:klass].try(:constantize)
     end
 
+    ##
+    # Fetch the name of *a* collection that utilizes resource_klass
+    # Note that this returns the first collection that matches regardless of context
+    #
+    # e.g.: name_for_klass(MiqAeDomain) => :automate
+    # (MiqAeDomain matches both the collections 'automate' and 'automate_domains')
     def name_for_klass(resource_klass)
       @cfg.detect { |_, spec| spec[:klass] == resource_klass.name }.try(:first)
     end
 
+    ##
+    # Fetch the name of *all* collections that utilize resource_klass
+    #
+    # e.g.: names_for_klass(MiqAeDomain => [:automate, :automate_domains]
+    #       names_for_klass(Blah) => []
+    def names_for_klass(resource_klass)
+      collections = []
+      @cfg.each do |collection_name, spec|
+        collections << collection_name if spec[:klass] == resource_klass.name
+      end
+
+      collections
+    end
+
+    ##
+    # Fetch the name of *a* collection that utilizes a class which is a parent of resource_class
+    # Note that this returns the first collection that specifies a parent class of resource_class regardless of context
+    #
+    # e.g.: name_for_subclass(ManageIQ::Providers::Redhat::InfraManager::Vm) => :vms
+    #       name_for_subclass(ServiceReconfigureRequest) => :requests
     def name_for_subclass(resource_class)
       resource_class = resource_class.to_s
       @cfg.detect do |collection, _|
