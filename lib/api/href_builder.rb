@@ -11,9 +11,7 @@ module Api
     # If the resource is not part of a valid collection/subcollection, returns nil
     #
     def href_for(resource)
-      potential_collection_names = collection_config.names_for_klass(resource.class)
-
-      collection_name = potential_collection_names.detect { |name| name.to_s == request.collection }
+      collection_name = collection_name_from_class(resource.class) || collection_name_from_subclass(resource.class)
       return nil unless collection_name.present?
 
       key_id = collection_config.resource_identifier(collection_name)
@@ -60,7 +58,16 @@ module Api
     private
 
     def collection_config
-      @collection_config = CollectionConfig.new
+      @collection_config ||= CollectionConfig.new
+    end
+
+    def collection_name_from_class(klass)
+      potential_collection_names = collection_config.names_for_klass(klass)
+      potential_collection_names.detect { |name| name.to_s == request.collection }
+    end
+
+    def collection_name_from_subclass(klass)
+      collection_config.name_for_subclass(klass)
     end
   end
 end
