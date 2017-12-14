@@ -24,7 +24,7 @@ module Api
         # being returned is the subcollection in the request, nesting it under
         # the request's collection is the most valid href.
         normalize_url("#{request.collection}/#{request.collection_id}/#{collection_name}/#{resource.send(key_id)}")
-      else
+      elsif collection_config.collection?(collection_name.to_s)
         normalize_url("#{collection_name}/#{resource.send(key_id)}")
       end
     end
