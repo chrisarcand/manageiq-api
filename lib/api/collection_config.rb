@@ -108,6 +108,26 @@ module Api
       end.try(:first)
     end
 
+    ##
+    # Fetch the name of *all* collections that utilizes a class which is a parent of resource_class
+    #
+    # e.g.: names_for_subclass(ManageIQ::Providers::Amazon::CloudManager::Vm) => [:instances, :vms]
+    # Because ManageIQ::Providers::Amazon::CloudManager::Vm is a subclass of both:
+    #   * ManageIQ::Providers::CloudManager::Vm from the /instances collection
+    #   * Vm from the /vms collection
+    def names_for_subclass(resource_class)
+      collections = []
+      resource_class = resource_class.to_s
+      @cfg.each do |collection, _|
+        collection_class = klass(collection)
+        if collection_class && (collection_class.to_s == resource_class || collection_class.descendants.collect(&:to_s).include?(resource_class))
+          collections << collection
+        end
+      end
+
+      collections
+    end
+
     def what_refers_to_feature(product_feature_name)
       referenced_identifiers[product_feature_name]
     end

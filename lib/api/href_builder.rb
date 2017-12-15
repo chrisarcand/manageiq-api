@@ -16,7 +16,7 @@ module Api
 
       key_id = collection_config.resource_identifier(collection_name)
 
-      if collection_name.to_s == request.subcollection
+      if collection_name.to_s == request.subcollection && collection_config.subcollection?(request.collection, collection_name.to_s)
         # We unconventionally support nested single resources w/o toplevel collections
         # e.g. /:collection/:c_id/:subcollection/:id without /:subcollection/:id
         # We cannot deduce with the resource alone what collection this
@@ -61,13 +61,43 @@ module Api
       @collection_config ||= CollectionConfig.new
     end
 
+    ##
+    # Search for the collection name via collections that explicitly use this class
+    #
+    # If there exists more than one, use the collection that is being queried in the request
+    #
     def collection_name_from_class(klass)
       potential_collection_names = collection_config.names_for_klass(klass)
       potential_collection_names.detect { |name| name.to_s == request.collection }
     end
 
+    ##
+    # Search for the collection name via collections that use a parent class of klass
+    #
+    # If there exists more than one, use the one that exists as a unique subcollection of the request's collection
+    # e.g.: /providers?expand=vms
+    #       Vms map to both /instances and /vms, /vms is subcollection of /providers so use that.
+    #
+    # If neither are a unique subcollection under the request collection, just return one.
+    #
+    # e.g.: /generic_object_definitions/:id/generic_objects/:id?associations=vms
+    #      Vms are not a subcollection of generic object definitions but they have two possible collections
+    #      deduced from the parent class used in /instances and /vms. Returns /instances because that's
+    #      what is first (collections are alphabetical)
+    #
     def collection_name_from_subclass(klass)
-      collection_config.name_for_subclass(klass)
+      potential_collection_names = collection_config.names_for_subclass(klass)
+      return potential_collection_names.first if potential_collection_names.size == 1
+
+      if potential_collection_names.size > 1
+        subcollection_of_request_collection = collection_config.subcollections(request.collection) | potential_collection_names
+
+        if subcollection_of_request_collection.size == 1
+          return subcollection_of_request_collection.first
+        else
+          potential_collection_names.first
+        end
+      end
     end
   end
 end

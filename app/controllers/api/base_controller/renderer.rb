@@ -44,12 +44,11 @@ module Api
           json.set! 'pages', link_builder.pages if link_builder.links?
 
           unless @req.hide?("resources") || collection_option?(:hide_resources)
-            key_id = collection_config.resource_identifier(type)
             json.resources resources.collect do |resource|
               if opts[:expand_resources]
                 add_hash json, resource_to_jbuilder(type, reftype, resource, opts).attributes!
               else
-                json.href HrefBuilder.new(@req).normalize_href(reftype, resource[key_id])
+                json.href HrefBuilder.new(@req).href_for(resource)
               end
             end
           end
@@ -403,7 +402,7 @@ module Api
               if @req.expand?(sc) || scr[sc_key_id].nil?
                 add_child js, normalize_hash(sctype, scr)
               else
-                js.child! { |jsc| jsc.href HrefBuilder.new(@req).normalize_href(sctype, scr[sc_key_id]) }
+                js.child! { |jsc| jsc.href HrefBuilder.new(@req).href_for(scr) }
               end
             end
           end
