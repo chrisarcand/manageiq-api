@@ -1,4 +1,7 @@
 module Api
+  # We don't use concrete controllers and serializers to help define what an href should be based on
+  # the controller or serializer used. This class regrettably serves as a way to systematically deduce
+  # a context based on the resource, the request, and the collections yaml to produce the proper href.
   class HrefBuilder
     attr_reader :request
 
@@ -8,24 +11,41 @@ module Api
 
     ##
     # Returns a valid href given a resource
-    # If the resource is not part of a valid collection/subcollection, returns nil
+    # If the resource (which could be almost anything - an empty hash, whatever)
+    # is not part of a valid collection/subcollection, returns nil
     #
     def href_for(resource)
-      collection_name = collection_name_from_class(resource.class) || collection_name_from_subclass(resource.class)
+      collection_name =   collection_name_from_class(resource.class)
+      collection_name ||= collection_name_from_subclass(resource.class)
+      collection_name ||= collection_name_from_hash(resource)
       return nil unless collection_name.present?
 
       key_id = collection_config.resource_identifier(collection_name)
+      resource_id = resource.is_a?(Hash) ? resource[key_id.to_s] : resource.send(key_id)
 
-      if collection_name.to_s == request.subcollection && collection_config.subcollection?(request.collection, collection_name.to_s)
+      if (collection_name.to_s == request.subcollection || request.expand?(collection_name.to_s)) && collection_config.subcollection?(request.collection, collection_name.to_s)
         # We unconventionally support nested single resources w/o toplevel collections
         # e.g. /:collection/:c_id/:subcollection/:id without /:subcollection/:id
-        # We cannot deduce with the resource alone what collection this
-        # object should be under. Therefore, we assume that if the object
-        # being returned is the subcollection in the request, nesting it under
-        # the request's collection is the most valid href.
-        normalize_url("#{request.collection}/#{request.collection_id}/#{collection_name}/#{resource.send(key_id)}")
+        #
+        # (IF the collection being returned is the subcollection in the request
+        # OR the collection being returned is part of a resource expansion)
+        # AND the collection is a valid subcollection underneath the request's collection
+        # THEN nest it under the request's collection
+        #
+        # BROKEN: Although we expect it, I can't deduce the collection id from the request to generate this href:
+        #
+        # /services/:id/generic_objects/:id
+        #
+        # From this index call:
+        #
+        # /services?expand=generic_objects
+        normalize_url("#{request.collection}/#{request.collection_id}/#{collection_name}/#{resource_id}")
+      elsif request.expand?(collection_name.to_s)
+        # The object returned is part of resource expansion.
+        # If it is a valid subcollection underneath the request's collection, return that
+        normalize_url("#{request.collection}/#{request.collection_id}/#{collection_name}/#{resource_id}")
       elsif collection_config.collection?(collection_name.to_s)
-        normalize_url("#{collection_name}/#{resource.send(key_id)}")
+        normalize_url("#{collection_name}/#{resource_id}")
       end
     end
 
@@ -97,6 +117,22 @@ module Api
         else
           potential_collection_names.first
         end
+      end
+    end
+
+    ##
+    # Determines the collection type from a hash representing that object
+    #
+    # Custom objects are a regrettable edge case as they aren't represented as models but hashes.
+    # See Api::Subcollections::GenericObjects#generic_objects_query_resource
+    #
+    # Note that use of this is DISCOURAGED. We should not be relying on this for 99% of cases
+    # (and it'd be nice if we could change how custom objects are returned to not do this, either)
+    def collection_name_from_hash(hash)
+      return nil unless hash.is_a?(Hash)
+
+      if %w(id generic_object_definition_id).all? { |key| hash.key?(key) } && hash['name'] =~ /generic_object_/
+        :generic_objects
       end
     end
   end
